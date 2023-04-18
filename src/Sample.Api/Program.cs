@@ -1,15 +1,56 @@
+using MassTransit.Logging;
+using OpenTelemetry;
+using OpenTelemetry.Exporter;
+using OpenTelemetry.Metrics;
+using OpenTelemetry.Resources;
+using OpenTelemetry.Trace;
 using Sample;
 
 var builder = WebApplication.CreateBuilder(args);
+ 
+builder.Host
+    .ConfigureAppConfiguration((hostingContext, config) =>
+    {
+        var env = hostingContext.HostingEnvironment;
+        config.SetBasePath(env.ContentRootPath);
+        config.AddJsonFile("appsettings.json", optional: true, reloadOnChange: false);
+        config.AddJsonFile($"appsettings.{env.EnvironmentName}.json", optional: true, reloadOnChange: false);
+        config.AddEnvironmentVariables();
+    })
+    .ConfigureServices((hostContext, services) =>
+    {
+        var configuration = hostContext.Configuration;
+        
+        services.AddControllers();
+
+        services.AddEndpointsApiExplorer();
+        services.AddSwaggerGen();
+        services.AddOpenTelemetry().ConfigureResource(x => x.AddService("Sample Service"))
+            .WithMetrics(builder =>
+                builder.AddAspNetCoreInstrumentation()
+                    .AddRuntimeInstrumentation()
+                    .AddConsoleExporter()
+                    .AddOtlpExporter(c => {
+                        c.ExportProcessorType = ExportProcessorType.Batch;
+                        c.Endpoint = new Uri(configuration.GetConnectionString("OtelEndpoint"));
+                        c.Protocol = OtlpExportProtocol.Grpc;
+                    })
+            )
+            .WithTracing(builder => builder.AddAspNetCoreInstrumentation()
+                .AddSource(DiagnosticHeaders.DefaultListenerName) 
+                .AddConsoleExporter()
+                .AddAspNetCoreInstrumentation()
+                .AddOtlpExporter(c => {
+                    c.ExportProcessorType = ExportProcessorType.Batch;
+                    c.Endpoint = new Uri(configuration.GetConnectionString("OtelEndpoint"));
+                    c.Protocol = OtlpExportProtocol.Grpc;
+                })
+            );
+    });
 
 builder.Host.UseSerilogConfiguration();
 
 builder.Host.UseMassTransitConfiguration(configureBus: (_, bus) => bus.AutoStart = true);
-
-builder.Services.AddControllers();
-
-builder.Services.AddEndpointsApiExplorer();
-builder.Services.AddSwaggerGen();
 
 var app = builder.Build();
 

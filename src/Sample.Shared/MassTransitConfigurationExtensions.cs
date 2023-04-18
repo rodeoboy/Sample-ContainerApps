@@ -9,22 +9,24 @@ using Microsoft.Extensions.Hosting;
 public static class MassTransitConfigurationExtensions
 {
     public static T UseMassTransitConfiguration<T>(this T builder, Action<IBusRegistrationConfigurator>? configureMassTransit = null,
-        Action<IBusRegistrationContext, IServiceBusBusFactoryConfigurator>? configureBus = null)
+        Action<IBusRegistrationContext, IRabbitMqBusFactoryConfigurator>? configureBus = null)
         where T : IHostBuilder
     {
         builder.UseMassTransit((hostContext, configurator) =>
         {
             configurator.SetKebabCaseEndpointNameFormatter();
 
-            configurator.AddServiceBusMessageScheduler();
+            //configurator.AddServiceBusMessageScheduler();
+            configurator.AddDelayedMessageScheduler();
 
             configureMassTransit?.Invoke(configurator);
 
-            configurator.UsingAzureServiceBus((context, cfg) =>
+            configurator.UsingRabbitMq((context, cfg) =>
             {
-                cfg.UseServiceBusMessageScheduler();
+                //cfg.UseServiceBusMessageScheduler();
+                cfg.UseDelayedMessageScheduler();
 
-                cfg.Host(hostContext.Configuration.GetConnectionString("ServiceBus"));
+                cfg.Host(hostContext.Configuration.GetConnectionString("Rabbit"));
 
                 cfg.Publish<OrderMessage>(x => x.Exclude = true);
                 cfg.Send<OrderMessage>(s => s.UseSessionIdFormatter(c => c.Message.OrderId.ToString("D")));
