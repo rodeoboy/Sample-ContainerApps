@@ -30,7 +30,7 @@ var host = Host.CreateDefaultBuilder(args)
     .ConfigureServices((hostContext, services) =>
         {
             var configuration = hostContext.Configuration;
-            services.AddOpenTelemetry().ConfigureResource(x => x.AddService("Sample Service"))
+            services.AddOpenTelemetry().ConfigureResource(x => x.AddService("oteltest.worker"))
                 .WithMetrics(builder =>
                         builder.AddOtlpExporter(c => {
                             c.ExportProcessorType = ExportProcessorType.Batch;
@@ -47,6 +47,11 @@ var host = Host.CreateDefaultBuilder(args)
                             c.Protocol = OtlpExportProtocol.Grpc;
                         })
                         .AddConsoleExporter()
+                        // .AddJaegerExporter(c =>
+                        // {
+                        //     c.AgentHost = "localhost";
+                        //     c.AgentPort = 6831;
+                        // })
                 );
         })
     .Build();

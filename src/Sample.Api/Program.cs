@@ -25,7 +25,7 @@ builder.Host
 
         services.AddEndpointsApiExplorer();
         services.AddSwaggerGen();
-        services.AddOpenTelemetry().ConfigureResource(x => x.AddService("Sample Service"))
+        services.AddOpenTelemetry().ConfigureResource(x => x.AddService("oteltest.api"))
             .WithMetrics(builder =>
                 builder.AddAspNetCoreInstrumentation()
                     .AddRuntimeInstrumentation()
@@ -45,6 +45,11 @@ builder.Host
                     c.Endpoint = new Uri(configuration.GetConnectionString("OtelEndpoint"));
                     c.Protocol = OtlpExportProtocol.Grpc;
                 })
+                // .AddJaegerExporter(c =>
+                // {
+                //     c.AgentHost = "localhost";
+                //     c.AgentPort = 6831;
+                // })
             );
     });
 
